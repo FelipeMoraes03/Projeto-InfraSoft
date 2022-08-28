@@ -33,7 +33,8 @@ public class Player {
 
     private int currentFrame = 0;
 
-    private String[][] songTableList = new String[2][5]; //PRIMEIRO IDX PRECISA SER DINÂMICO
+    private String[][] songTableArray = null; //PRIMEIRO IDX PRECISA SER DINÂMICO
+    private ArrayList<String[]> songTableList = new ArrayList<String[]>();
 
     private ArrayList<Song> songList = new ArrayList<Song>();
 
@@ -44,22 +45,46 @@ public class Player {
     };
     private final ActionListener buttonListenerRemove = e -> {
         new Thread( () -> {
-            System.out.println("REMOVE");
+            //System.out.println("REMOVE");
+            int indexRemoved;
+            indexRemoved = window.getIndexSelectedSong();
+
+            //REMOVE OS ELEMENTOS LA LISTA DE "Song" E DA LISTA DE "String[]"
+            songList.remove(indexRemoved);
+            songTableList.remove(indexRemoved);
+
+            //ARRAY COM LINHAS DINÂMICAS
+            songTableArray = new String[songList.size()][6];
+            for (int idx = 0; idx < songList.size(); idx++) {
+                songTableArray[idx] = songTableList.get(idx);
+            }
+
+            //ATUALIZAR A TABELA DAS MÚSICAS
+            window.setQueueList(songTableArray);
+
         }).start();
     };
     private final ActionListener buttonListenerAddSong = e -> {
         new Thread( () -> {
-            System.out.println("ADD");
+            //System.out.println("ADD");
             Song music;
             String[] musicString;
             try {
                 music = window.openFileChooser();
                 if (music != null) {
+                    //ADICIONA OS ELEMENTOS NAS LISTAS DE "Song" E DE "String[]"
                     songList.add(music);
                     musicString = window.transformSongToString(music);
-                    songTableList[songList.size() - 1] = musicString;
+                    songTableList.add(songTableList.size(), musicString);
 
-                    window.setQueueList(songTableList);
+                    //ARRAY COM LINHAS DINÂMICAS
+                    songTableArray = new String[songList.size()][6];
+                    for (int idx = 0; idx < songList.size(); idx++) {
+                        songTableArray[idx] = songTableList.get(idx);
+                    }
+
+                    //ATUALIZAR A TABELA DAS MÚSICAS
+                    window.setQueueList(songTableArray);
                 }
 
             } catch (IOException | BitstreamException | UnsupportedTagException | InvalidDataException ex) {
@@ -98,7 +123,7 @@ public class Player {
     public Player() {
         EventQueue.invokeLater(() -> window = new PlayerWindow(
                 "Reprodutor Musical",
-                songTableList,
+                songTableArray,
                 buttonListenerPlayNow,
                 buttonListenerRemove,
                 buttonListenerAddSong,
