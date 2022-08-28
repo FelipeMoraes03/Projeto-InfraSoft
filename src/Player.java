@@ -11,6 +11,9 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 
+import java.io.IOException;
+import java.util.ArrayList;
+
 public class Player {
 
     /**
@@ -30,15 +33,54 @@ public class Player {
 
     private int currentFrame = 0;
 
-    private final ActionListener buttonListenerPlayNow = e -> ;
-    private final ActionListener buttonListenerRemove = e -> ;
-    private final ActionListener buttonListenerAddSong = e -> ;
-    private final ActionListener buttonListenerPlayPause = e -> ;
-    private final ActionListener buttonListenerStop = e -> ;
-    private final ActionListener buttonListenerNext = e -> ;
-    private final ActionListener buttonListenerPrevious = e -> ;
-    private final ActionListener buttonListenerShuffle = e -> ;
-    private final ActionListener buttonListenerLoop = e -> ;
+    private String[][] songTableList = new String[2][5]; //PRIMEIRO IDX PRECISA SER DINÂMICO
+
+    private ArrayList<Song> songList = new ArrayList<Song>();
+
+    private final ActionListener buttonListenerPlayNow = e -> {
+        new Thread( () -> {
+            System.out.println("PLAY-NOW");
+        }).start();
+    };
+    private final ActionListener buttonListenerRemove = e -> {
+        new Thread( () -> {
+            System.out.println("REMOVE");
+        }).start();
+    };
+    private final ActionListener buttonListenerAddSong = e -> {
+        new Thread( () -> {
+            System.out.println("ADD");
+            Song music;
+            String[] musicString;
+            try {
+                music = window.openFileChooser();
+                if (music != null) {
+                    songList.add(music);
+                    musicString = window.transformSongToString(music);
+                    songTableList[songList.size() - 1] = musicString;
+
+                    window.setQueueList(songTableList);
+                }
+
+            } catch (IOException | BitstreamException | UnsupportedTagException | InvalidDataException ex) {
+                throw new RuntimeException(ex);
+            }
+        }).start();
+    };
+    private final ActionListener buttonListenerPlayPause = e -> {
+        new Thread( () -> {
+            System.out.println("PLAY/PAUSE");
+        }).start();
+    };
+    private final ActionListener buttonListenerStop = e -> {
+        new Thread( () -> {
+            System.out.println("STOP");
+        }).start();
+    };
+    private final ActionListener buttonListenerNext = e -> {}; //ENTREGA 2
+    private final ActionListener buttonListenerPrevious = e -> {}; //ENTREGA 2
+    private final ActionListener buttonListenerShuffle = e -> {}; //ENTREGA 3
+    private final ActionListener buttonListenerLoop = e -> {}; //ENTREGA 3
     private final MouseInputAdapter scrubberMouseInputAdapter = new MouseInputAdapter() {
         @Override
         public void mouseReleased(MouseEvent e) {
@@ -55,8 +97,8 @@ public class Player {
 
     public Player() {
         EventQueue.invokeLater(() -> window = new PlayerWindow(
-                TITULO_DA_JANELA,
-                LISTA_DE_REPRODUÇÃO,
+                "Reprodutor Musical",
+                songTableList,
                 buttonListenerPlayNow,
                 buttonListenerRemove,
                 buttonListenerAddSong,

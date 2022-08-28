@@ -584,6 +584,20 @@ public class PlayerWindow {
             return null;
         }
     }
+
+    //ADICIONADO POR MIM:
+    public String[] transformSongToString(Song music){
+        String musicString[] = new String[6]; //(Title - Album - Artist - Year - Length - Path)
+
+        musicString[0] = music.getTitle();
+        musicString[1] = music.getAlbum();
+        musicString[2] = music.getArtist();
+        musicString[3] = music.getYear();
+        musicString[4] = music.getStrLength();
+        musicString[5] = music.getFilePath();
+
+        return musicString;
+    }
 }
 
 /**
