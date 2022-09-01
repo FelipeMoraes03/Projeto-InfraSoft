@@ -416,11 +416,11 @@ public class PlayerWindow {
         miniPlayerTotalTime.setText("- - : - -");
         miniPlayerSongInfo.setText("");
         miniPlayerScrubber.setMaximum(0);
-        setPlayPauseButtonIcon(BUTTON_ICON_PLAY);
+        setPlayPauseButtonIcon(BUTTON_ICON_PAUSE);
         setEnabledPreviousButton(false);
         setEnabledNextButton(false);
-        setEnabledPlayPauseButton(false);
-        setEnabledStopButton(false);
+        setEnabledPlayPauseButton(!miniPlayerPlayPauseButton.isEnabled());
+        setEnabledStopButton(!miniPlayerStopButton.isEnabled());
         setEnabledScrubber(false);
     }
 
@@ -584,6 +584,26 @@ public class PlayerWindow {
             return null;
         }
     }
+
+    //ADICIONADO POR FELIPE:
+    //TRANSFORMA UM OBJETO "Song" EM "String[]"
+    public String[] transformSongToString(Song music){
+        String musicString[] = new String[6]; //(Title - Album - Artist - Year - Length - Path)
+
+        musicString[0] = music.getTitle();
+        musicString[1] = music.getAlbum();
+        musicString[2] = music.getArtist();
+        musicString[3] = music.getYear();
+        musicString[4] = music.getStrLength();
+        musicString[5] = music.getFilePath();
+
+        return musicString;
+    }
+
+    //RETORNA O INDEX DA MÚSICA SELECIONADA
+    public int getIndexSelectedSong() {return queueList.getSelectedRow();};
+
+    //ADICIONADO POR PEDRO:
 }
 
 /**
