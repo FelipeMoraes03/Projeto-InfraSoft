@@ -585,8 +585,8 @@ public class PlayerWindow {
         }
     }
 
-    //ADICIONADO POR FELIPE:
-    //TRANSFORMA UM OBJETO "Song" EM "String[]"
+    //ADICIONADOS: 
+    //Tranforma um objeto "Song" em "String[]"
     public String[] transformSongToString(Song music){
         String musicString[] = new String[6]; //(Title - Album - Artist - Year - Length - Path)
 
@@ -600,10 +600,8 @@ public class PlayerWindow {
         return musicString;
     }
 
-    //RETORNA O INDEX DA MÚSICA SELECIONADA
+    //Retorna o index da música selecionada na janela
     public int getIndexSelectedSong() {return queueList.getSelectedRow();};
-
-    //ADICIONADO POR PEDRO:
 }
 
 /**
