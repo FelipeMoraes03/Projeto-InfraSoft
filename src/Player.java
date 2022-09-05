@@ -297,6 +297,8 @@ public class Player {
                     playNow(currentIndex);
                 } else {
                     stop();
+                    window.setPlayPauseButtonIcon(0);
+                    window.setQueueList(songTableArray);
                 }
             }
         }).start();
