@@ -107,11 +107,6 @@ public class Player {
                 lock.lock();
                 music = window.openFileChooser();
                 if (music != null) {
-                    //Habilita os botões da interfácie pela primeira vez
-                    if (songList.size() == 0) {
-                        window.setEnabledPlayPauseButton(true);
-                        window.setEnabledStopButton(true);
-                    }
 
                     //Adiciona a música na lista de "Song" e na lista de "String[]"
                     songList.add(music);
@@ -142,7 +137,7 @@ public class Player {
         paused = !paused;
         playing = !playing;
         //Atualiza o botão PlayPause
-        window.setPlayPauseButtonIcon(paused ? 1 : 0);
+        window.setPlayPauseButtonIcon(paused ? 0 : 1);
         //Retorna a execução caso o botão clicado seja play
         if (!paused) play();
     };
@@ -256,7 +251,7 @@ public class Player {
                 //Atualiza a janela com os dados da música a ser tocada
                 currentSong = songList.get(idx);
                 window.setPlayingSongInfo(currentSong.getTitle(), currentSong.getAlbum(), currentSong.getArtist());
-                window.setPlayPauseButtonIcon(0);
+                window.setPlayPauseButtonIcon(1);
                 window.setEnabledScrubber(true);
 
                 //Cria Decoder e Bitstream e inicia a música
