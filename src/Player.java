@@ -50,6 +50,7 @@ public class Player {
     private boolean playing = false;
     private boolean paused = false;
     private boolean play = false;
+    private boolean musicStopped = true;
     private boolean newMusicPlay = false;
 
     private final Lock lock = new ReentrantLock();
@@ -174,14 +175,26 @@ public class Player {
                 //Pega o index da música a ser removida na janela
                 indexRemoved = window.getIndexSelectedSong();
 
+                //Se a música removida estiver em execução para a execução
+                if (indexRemoved == currentIndex) stop();
+                else {
+                    //Desabilita botão Previous se após remoção não houver música antes da atual
+                    if (indexRemoved == 0 && currentIndex == 1) {
+                        window.setEnabledPreviousButton(false);
+                    }
+                    //Desabilita botão Next se após remoção não houver música depois da atual
+                    else if (indexRemoved == songList.size()-1 && currentIndex == songList.size()-2) {
+                        window.setEnabledNextButton(false);
+                    }
+                    //Atualiza o index da música em execução caso seja necessário
+                    if (indexRemoved < currentIndex) {
+                        currentIndex--;
+                    }
+                }
+
                 //Remove a música da lista de "Song" e da lista de "String[]"
                 songList.remove(indexRemoved);
                 songTableList.remove(indexRemoved);
-
-                //Se a música removida estiver em execução para a execução
-                if (indexRemoved == currentIndex) stop();
-                    //Atualiza o index da música em execução caso seja necessário
-                else if (indexRemoved < currentIndex) currentIndex--;
 
                 //Atualiza SongTableArray para ser um array bidimensional dinâmico
                 songTableArray = new String[songList.size()][6];
@@ -216,6 +229,11 @@ public class Player {
                     songTableArray = new String[songList.size()][6];
                     for (int idx = 0; idx < songList.size(); idx++) {
                         songTableArray[idx] = songTableList.get(idx);
+                    }
+
+                    //Habilita botão Next se a música atual era a última música
+                    if (currentIndex == songList.size()-2 && !musicStopped) {
+                        window.setEnabledNextButton(true);
                     }
 
                     //Atualiza a tabela de músicas na janela
@@ -256,6 +274,7 @@ public class Player {
                 //Declara que a música está em execução
                 playing = true;
                 paused = false;
+                musicStopped = false;
 
                 //Libera o clique dos botões PlayPause e Stop
                 window.setEnabledPlayPauseButton(true);
@@ -331,7 +350,7 @@ public class Player {
 
             //Toca a próxima música da lista, caso exista
             if (!play) {
-                if (currentIndex < songList.size()-1) {
+                if (currentIndex < songList.size()-1 && !musicStopped) {
                     //System.out.println("NEXT");
                     currentIndex++;
                     playNow(currentIndex);
@@ -347,12 +366,20 @@ public class Player {
     }
     private void stop() {
         //Para a execução da música
-        currentFrame = 0;
-        play = false;
-        playing = false;
-        paused = true;
-        //Atualiza a janela para nenhuma música tocando
-        window.resetMiniPlayer();
+        try {
+            lock.lock();
+
+            currentFrame = 0;
+            play = false;
+            playing = false;
+            paused = true;
+            musicStopped = true;
+            //Atualiza a janela para nenhuma música tocando
+            window.resetMiniPlayer();
+        }
+        finally {
+            lock.unlock();
+        }
     }
 
     private void next() {

@@ -419,8 +419,8 @@ public class PlayerWindow {
         setPlayPauseButtonIcon(BUTTON_ICON_PAUSE);
         setEnabledPreviousButton(false);
         setEnabledNextButton(false);
-        setEnabledPlayPauseButton(!miniPlayerPlayPauseButton.isEnabled());
-        setEnabledStopButton(!miniPlayerStopButton.isEnabled());
+        setEnabledPlayPauseButton(false);
+        setEnabledStopButton(false);
         setEnabledScrubber(false);
     }
 
