@@ -49,7 +49,7 @@ public class Player {
     private int currentIndex;
     private Song currentSong;
     private boolean playing = false;
-    private boolean paused = false;
+    private boolean paused = true;
     private boolean play = false;
     private boolean musicStopped = true;
     private boolean newMusicPlay = false;
@@ -274,13 +274,13 @@ public class Player {
                 lock.lock();
 
                 //Declara que a música está em execução
-                playing = true;
                 paused = false;
                 musicStopped = false;
 
                 //Libera o clique dos botões PlayPause e Stop
                 window.setEnabledPlayPauseButton(true);
                 window.setEnabledStopButton(true);
+                window.setEnabledScrubber(true);
 
                 //Libera o clique do botão next caso tenha música depois na fila
                 if (currentIndex < songList.size()-1) {
@@ -420,28 +420,36 @@ public class Player {
     }
 
     private void released() {
-        //Cria Decoder e Bitstream (idêntico ao playNow)
-        try {
-            currentFrame = 0;
-            device = FactoryRegistry.systemRegistry().createAudioDevice();
-            device.open(decoder = new Decoder());
-            bitstream = new Bitstream(currentSong.getBufferedInputStream());
-        } catch (JavaLayerException | FileNotFoundException ex) {
-            System.out.println(ex);
+        if (!musicStopped) {
+
+            if (newMusicPlay) {
+                newMusicPlay = false;
+            }
+            else {
+                //Cria Decoder e Bitstream (idêntico ao playNow)
+                try {
+                    currentFrame = 0;
+                    device = FactoryRegistry.systemRegistry().createAudioDevice();
+                    device.open(decoder = new Decoder());
+                    bitstream = new Bitstream(currentSong.getBufferedInputStream());
+                } catch (JavaLayerException | FileNotFoundException ex) {
+                    System.out.println(ex);
+                }
+
+                lastFrame = (int) (window.getScrubberValue() / currentSong.getMsPerFrame());
+
+                try {
+                    skipToFrame(lastFrame);
+                    currentFrame = lastFrame;
+                    window.setTime((int) (currentFrame * currentSong.getMsPerFrame()), totalTime);
+                } catch (BitstreamException e) {
+                    System.out.println(e);
+                }
+
+                if (playing) paused = false;
+                play();
+            }
         }
-
-        lastFrame = (int) (window.getScrubberValue()/currentSong.getMsPerFrame());
-
-        try {
-            skipToFrame(lastFrame);
-            currentFrame = lastFrame;
-            window.setTime((int) (currentFrame*currentSong.getMsPerFrame()), totalTime);
-        } catch (BitstreamException e) {
-            System.out.println(e);
-        }
-
-        if (playing) paused = false;
-        play();
     }
 
     //</editor-fold>
