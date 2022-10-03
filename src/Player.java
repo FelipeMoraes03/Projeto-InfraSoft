@@ -37,6 +37,7 @@ public class Player {
     private PlayerWindow window;
 
     private int currentFrame = 0;
+    private int lastFrame;
 
     //Lista das músicas (array dinâmico)
     private String[][] songTableArray = null;
@@ -92,15 +93,16 @@ public class Player {
     private final MouseInputAdapter scrubberMouseInputAdapter = new MouseInputAdapter() {
         @Override
         public void mouseReleased(MouseEvent e) {
+            released();
         }
 
         @Override
         public void mousePressed(MouseEvent e) {
+            pressed();
         }
 
         @Override
-        public void mouseDragged(MouseEvent e) {
-        }
+        public void mouseDragged(MouseEvent e) { ; }
     };
 
     public Player() {
@@ -410,6 +412,36 @@ public class Player {
         finally {
             lock.unlock();
         }
+    }
+
+    //Métodos para a entrada do mouse
+    private void pressed() {
+        paused = true;
+    }
+
+    private void released() {
+        //Cria Decoder e Bitstream (idêntico ao playNow)
+        try {
+            currentFrame = 0;
+            device = FactoryRegistry.systemRegistry().createAudioDevice();
+            device.open(decoder = new Decoder());
+            bitstream = new Bitstream(currentSong.getBufferedInputStream());
+        } catch (JavaLayerException | FileNotFoundException ex) {
+            System.out.println(ex);
+        }
+
+        lastFrame = (int) (window.getScrubberValue()/currentSong.getMsPerFrame());
+
+        try {
+            skipToFrame(lastFrame);
+            currentFrame = lastFrame;
+            window.setTime((int) (currentFrame*currentSong.getMsPerFrame()), totalTime);
+        } catch (BitstreamException e) {
+            System.out.println(e);
+        }
+
+        if (playing) paused = false;
+        play();
     }
 
     //</editor-fold>
