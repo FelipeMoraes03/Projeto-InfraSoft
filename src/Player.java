@@ -53,6 +53,8 @@ public class Player {
     private boolean play = false;
     private boolean musicStopped = true;
     private boolean newMusicPlay = false;
+    private boolean musicInLoop = false;
+    private boolean shuffleMusic = false;
 
     private final Lock lock = new ReentrantLock();
 
@@ -86,10 +88,10 @@ public class Player {
     private final ActionListener buttonListenerPrevious = e -> previous();
 
     //Botão Shuffle
-    private final ActionListener buttonListenerShuffle = e -> {}; //ENTREGA 3
+    private final ActionListener buttonListenerShuffle = e -> shuffle(); //ENTREGA 3
 
     //Botão Loop
-    private final ActionListener buttonListenerLoop = e -> {}; //ENTREGA 3
+    private final ActionListener buttonListenerLoop = e -> loop(); //ENTREGA 3
     private final MouseInputAdapter scrubberMouseInputAdapter = new MouseInputAdapter() {
         @Override
         public void mouseReleased(MouseEvent e) {
@@ -204,6 +206,17 @@ public class Player {
                     songTableArray[idx] = songTableList.get(idx);
                 }
 
+                //Desabilita o botão Loop caso não tenha mais músicas
+                if (songList.size() == 0) {
+                    window.setEnabledLoopButton(false);
+                    //musicInLoop = false;
+                }
+
+                //Desabilita o botão Shuffle caso só tenha uma ou não tenha mais músicas
+                if (songList.size() < 2) {
+                    window.setEnabledShuffleButton(false);
+                }
+
                 //Atualiza a tabela de músicas na janela
                 window.setQueueList(songTableArray);
 
@@ -236,6 +249,16 @@ public class Player {
                     //Habilita botão Next se a música atual era a última música
                     if (currentIndex == songList.size()-2 && !musicStopped) {
                         window.setEnabledNextButton(true);
+                    }
+
+                    //Habilita o botão Loop caso ainda exista alguma música
+                    if (songList.size() > 0) {
+                        window.setEnabledLoopButton(true);
+                    }
+
+                    //Habilita o botão Shuffle caso ainda exista mais de uma música
+                    if (songList.size() > 1) {
+                        window.setEnabledShuffleButton(true);
                     }
 
                     //Atualiza a tabela de músicas na janela
@@ -350,12 +373,16 @@ public class Player {
                 }
             }
 
-            //Toca a próxima música da lista, caso exista
+            //Toca a próxima música da lista, caso exista OU se estiver em Loop
             if (!play) {
                 if (currentIndex < songList.size()-1 && !musicStopped) {
                     //System.out.println("NEXT");
                     currentIndex++;
                     playNow(currentIndex);
+                }
+                else if(currentIndex == songList.size()-1 && !musicStopped && musicInLoop) {
+                    currentIndex = 0;
+                    playNow(0);
                 }
                 else {
                     //System.out.println("END");
@@ -450,6 +477,14 @@ public class Player {
                 play();
             }
         }
+    }
+
+    private void loop() {
+        musicInLoop = !musicInLoop;
+    }
+
+    private void shuffle() {
+        shuffleMusic = !shuffleMusic;
     }
 
     //</editor-fold>
