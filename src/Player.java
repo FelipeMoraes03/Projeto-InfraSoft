@@ -15,6 +15,7 @@ import java.awt.event.MouseEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.Condition;
@@ -41,12 +42,14 @@ public class Player {
 
     //Lista das músicas (array dinâmico)
     private String[][] songTableArray = null;
-    private ArrayList<String[]> songTableList = new ArrayList<String[]>();
+    private final ArrayList<String[]> songTableList = new ArrayList<String[]>();
     private ArrayList<Song> songList = new ArrayList<Song>();
-
+    private ArrayList<Song> shuffledSongList = new ArrayList<Song>();
+    private  ArrayList<Integer> associativeArray = new ArrayList<Integer>();
     private int currentTime;
     private int totalTime;
     private int currentIndex;
+    private int associativeIdx;
     private Song currentSong;
     private boolean playing = false;
     private boolean paused = true;
@@ -173,6 +176,7 @@ public class Player {
     private void removeSong() {
         new Thread( () -> {
             int indexRemoved;
+            int ordenedIndexRemoved;
 
             try {
                 lock.lock();
@@ -196,16 +200,33 @@ public class Player {
                     }
                 }
 
-                //Remove a música da lista de "Song" e da lista de "String[]"
-                songList.remove(indexRemoved);
-                songTableList.remove(indexRemoved);
-
-                //Atualiza SongTableArray para ser um array bidimensional dinâmico
-                songTableArray = new String[songList.size()][6];
-                for (int idx = 0; idx < songList.size(); idx++) {
-                    songTableArray[idx] = songTableList.get(idx);
+                if (shuffleMusic) {
+                    //Remove a música da listas de "Song" (aleatória e não aleatória) e da lista de "String[]"
+                    ordenedIndexRemoved = associativeArray.get(indexRemoved);
+                    associativeArray.remove(indexRemoved);
+                    shuffledSongList.remove(indexRemoved);
+                    songList.remove(ordenedIndexRemoved);
+                    songTableList.remove(ordenedIndexRemoved);
+                    //Atualiza SongTableArray para ser um array bidimensional dinâmico
+                    songTableArray = new String[songList.size()][6];
+                    for (int idx = 0; idx < songList.size(); idx++) {
+                        if (associativeArray.get(idx) > indexRemoved) {
+                            associativeArray.set(idx, associativeArray.get(idx)-1);
+                        }
+                        associativeIdx = associativeArray.get(idx);
+                        songTableArray[idx] = songTableList.get(associativeIdx);
+                    }
                 }
-
+                else {
+                    //Remove a música da lista de "Song" e da lista de "String[]"
+                    songList.remove(indexRemoved);
+                    songTableList.remove(indexRemoved);
+                    //Atualiza SongTableArray para ser um array bidimensional dinâmico
+                    songTableArray = new String[songList.size()][6];
+                    for (int idx = 0; idx < songList.size(); idx++) {
+                        songTableArray[idx] = songTableList.get(idx);
+                    }
+                }
                 //Desabilita o botão Loop caso não tenha mais músicas
                 if (songList.size() == 0) {
                     window.setEnabledLoopButton(false);
@@ -235,17 +256,27 @@ public class Player {
                 music = window.openFileChooser();
                 if (music != null) {
 
-                    //Adiciona a música na lista de "Song" e na lista de "String[]"
+                    //Adiciona a música nas listas de "Song" (ordenada e ordem aleatória)
+                    //e na lista de "String[]" e em "associativeArray"
                     songList.add(music);
+                    shuffledSongList.add(music);
+                    associativeArray.add(songList.size()-1);
                     musicString = window.transformSongToString(music);
-                    songTableList.add(songTableList.size(), musicString);
+                    songTableList.add(musicString);
 
                     //Atualiza SongTableArray para ser um array bidimensional dinâmico
                     songTableArray = new String[songList.size()][6];
-                    for (int idx = 0; idx < songList.size(); idx++) {
-                        songTableArray[idx] = songTableList.get(idx);
+                    if (shuffleMusic) {
+                        for (int idx = 0; idx < songList.size(); idx++) {
+                            associativeIdx = associativeArray.get(idx);
+                            songTableArray[idx] = songTableList.get(associativeIdx);
+                        }
                     }
-
+                    else {
+                        for (int idx = 0; idx < songList.size(); idx++) {
+                            songTableArray[idx] = songTableList.get(idx);
+                        }
+                    }
                     //Habilita botão Next se a música atual era a última música
                     if (currentIndex == songList.size()-2 && !musicStopped) {
                         window.setEnabledNextButton(true);
@@ -321,8 +352,15 @@ public class Player {
                     window.setEnabledPreviousButton(false);
                 }
 
+                //Música atual pega no array aleatório
+                if (shuffleMusic) {
+                    currentSong = shuffledSongList.get(idx);
+                }
+                //Música atual pega no array não aleatório
+                else {
+                    currentSong = songList.get(idx);
+                }
                 //Atualiza a janela com os dados da música a ser tocada
-                currentSong = songList.get(idx);
                 window.setPlayingSongInfo(currentSong.getTitle(), currentSong.getAlbum(), currentSong.getArtist());
                 window.setPlayPauseButtonIcon(1);
                 window.setEnabledScrubber(true);
@@ -484,7 +522,72 @@ public class Player {
     }
 
     private void shuffle() {
+        //Altera o Estado de aleatoriedade
         shuffleMusic = !shuffleMusic;
+
+        //Verifica se está aleatório
+        if (shuffleMusic) {
+            associativeArray.clear();
+            shuffledSongList.clear();
+            //Verifica se não tem nenhuma música tocando
+            if (musicStopped) {
+                //Adiciona todos os index das músicas no array
+                //de associatividade e dá um shuffle nesses index
+                for (int index = 0; index < songList.size(); index++) {
+                    associativeArray.add(index);
+                }
+                Collections.shuffle(associativeArray);
+            } else {
+                //Adiciona todos os index (menos o currentIndex) das músicas
+                //no array de associatividade e dá um shuffle nesses index
+                for (int index = 0; index < songList.size(); index++) {
+                    if (index != currentIndex) {
+                        associativeArray.add(index);
+                    }
+                }
+                Collections.shuffle(associativeArray);
+                //Adiciona o currentIndex no início do array de associatividade
+                associativeArray.add(0, currentIndex);
+                //Indica que a música que está sendo tocada passou a ser
+                //a primeira da lista de músicas aleatórias
+                currentIndex = 0;
+            }
+            //Recria o songTableArray ordem aleatória
+            for (int idx = 0; idx < songList.size(); idx++) {
+                associativeIdx = associativeArray.get(idx);
+                songTableArray[idx] = songTableList.get(associativeIdx);
+                shuffledSongList.add(songList.get(associativeIdx));
+            }
+        } else {
+            currentIndex = associativeArray.get(currentIndex);
+            //Recria o songTableArray na ordem não aleatória
+            associativeArray.clear();
+            shuffledSongList.clear();
+            for (int idx = 0; idx < songList.size(); idx++) {
+                songTableArray[idx] = songTableList.get(idx);
+            }
+        }
+        //Desabilita os botões caso nenhuma música esteja tocando
+        if (musicStopped) {
+            window.setEnabledNextButton(false);
+            window.setEnabledPreviousButton(false);
+        } else {
+            //Libera o clique do botão next caso tenha música depois na fila
+            if (currentIndex < songList.size() - 1) {
+                window.setEnabledNextButton(true);
+            } else {
+                window.setEnabledNextButton(false);
+            }
+
+            //Libera o clique do botão previous caso tenha música antes na fila
+            if (currentIndex > 0) {
+                window.setEnabledPreviousButton(true);
+            } else {
+                window.setEnabledPreviousButton(false);
+            }
+        }
+            //Atualiza a janela na nova ordem
+            window.setQueueList(songTableArray);
     }
 
     //</editor-fold>
