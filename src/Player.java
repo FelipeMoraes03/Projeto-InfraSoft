@@ -16,9 +16,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.logging.Logger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.Condition;
 
 public class Player {
 
@@ -38,14 +38,13 @@ public class Player {
     private PlayerWindow window;
 
     private int currentFrame = 0;
-    private int lastFrame;
 
     //Lista das músicas (array dinâmico)
     private String[][] songTableArray = null;
-    private final ArrayList<String[]> songTableList = new ArrayList<String[]>();
-    private ArrayList<Song> songList = new ArrayList<Song>();
-    private ArrayList<Song> shuffledSongList = new ArrayList<Song>();
-    private  ArrayList<Integer> associativeArray = new ArrayList<Integer>();
+    private final ArrayList<String[]> songTableList = new ArrayList<>();
+    private final ArrayList<Song> songList = new ArrayList<>();
+    private final ArrayList<Song> shuffledSongList = new ArrayList<>();
+    private final ArrayList<Integer> associativeArray = new ArrayList<>();
     private int currentTime;
     private int totalTime;
     private int currentIndex;
@@ -60,6 +59,8 @@ public class Player {
     private boolean shuffleMusic = false;
 
     private final Lock lock = new ReentrantLock();
+
+    private final Logger logger = Logger.getLogger(Player.class.getName());
 
     //Botão PlayNow
     private final ActionListener buttonListenerPlayNow = new ActionListener() {
@@ -78,7 +79,7 @@ public class Player {
     //Botão AddSong
     private final ActionListener buttonListenerAddSong = e -> addSong();
 
-    //Botão PlayPouse
+    //Botão PlayPause
     private final ActionListener buttonListenerPlayPause = e -> playPause();
 
     //Botão Stop
@@ -107,7 +108,8 @@ public class Player {
         }
 
         @Override
-        public void mouseDragged(MouseEvent e) { ; }
+        public void mouseDragged(MouseEvent e) {
+        }
     };
 
     public Player() {
@@ -138,9 +140,13 @@ public class Player {
             Header h = bitstream.readFrame();
             if (h == null) return false;
 
-            SampleBuffer output = (SampleBuffer) decoder.decodeFrame(h, bitstream);
-            device.write(output.getBuffer(), 0, output.getBufferLength());
-            bitstream.closeFrame();
+            try {
+                SampleBuffer output = (SampleBuffer) decoder.decodeFrame(h, bitstream);
+                device.write(output.getBuffer(), 0, output.getBufferLength());
+                bitstream.closeFrame();
+            } catch (DecoderException ex) {
+                next();
+            }
         }
         return true;
     }
@@ -174,9 +180,9 @@ public class Player {
 
     //MÉTODOS AUXILIARES:
     private void removeSong() {
-        new Thread( () -> {
+        new Thread(() -> {
             int indexRemoved;
-            int ordenedIndexRemoved;
+            int orderedIndexRemoved;
 
             try {
                 lock.lock();
@@ -191,7 +197,7 @@ public class Player {
                         window.setEnabledPreviousButton(false);
                     }
                     //Desabilita botão Next se após remoção não houver música depois da atual
-                    else if (indexRemoved == songList.size()-1 && currentIndex == songList.size()-2) {
+                    else if (indexRemoved == songList.size() - 1 && currentIndex == songList.size() - 2) {
                         window.setEnabledNextButton(false);
                     }
                     //Atualiza o index da música em execução caso seja necessário
@@ -201,23 +207,20 @@ public class Player {
                 }
 
                 if (shuffleMusic) {
-                    //Remove a música da listas de "Song" (aleatória e não aleatória) e da lista de "String[]"
-                    ordenedIndexRemoved = associativeArray.get(indexRemoved);
+                    //Remove a música da lista de "Song" (aleatória e não aleatória) e da lista de "String[]"
+                    orderedIndexRemoved = associativeArray.get(indexRemoved);
                     associativeArray.remove(indexRemoved);
                     shuffledSongList.remove(indexRemoved);
-                    songList.remove(ordenedIndexRemoved);
-                    songTableList.remove(ordenedIndexRemoved);
+                    songList.remove(orderedIndexRemoved);
+                    songTableList.remove(orderedIndexRemoved);
                     //Atualiza SongTableArray para ser um array bidimensional dinâmico
                     songTableArray = new String[songList.size()][6];
                     for (int idx = 0; idx < songList.size(); idx++) {
-                        if (associativeArray.get(idx) > indexRemoved) {
-                            associativeArray.set(idx, associativeArray.get(idx)-1);
-                        }
+                        associativeArray.set(idx, songList.indexOf(shuffledSongList.get(idx)));
                         associativeIdx = associativeArray.get(idx);
                         songTableArray[idx] = songTableList.get(associativeIdx);
                     }
-                }
-                else {
+                } else {
                     //Remove a música da lista de "Song" e da lista de "String[]"
                     songList.remove(indexRemoved);
                     songTableList.remove(indexRemoved);
@@ -230,7 +233,6 @@ public class Player {
                 //Desabilita o botão Loop caso não tenha mais músicas
                 if (songList.size() == 0) {
                     window.setEnabledLoopButton(false);
-                    //musicInLoop = false;
                 }
 
                 //Desabilita o botão Shuffle caso só tenha uma ou não tenha mais músicas
@@ -248,7 +250,7 @@ public class Player {
     }
 
     private void addSong() {
-        new Thread( () -> {
+        new Thread(() -> {
             Song music;
             String[] musicString;
             try {
@@ -260,7 +262,7 @@ public class Player {
                     //e na lista de "String[]" e em "associativeArray"
                     songList.add(music);
                     shuffledSongList.add(music);
-                    associativeArray.add(songList.size()-1);
+                    associativeArray.add(songList.size() - 1);
                     musicString = window.transformSongToString(music);
                     songTableList.add(musicString);
 
@@ -271,14 +273,13 @@ public class Player {
                             associativeIdx = associativeArray.get(idx);
                             songTableArray[idx] = songTableList.get(associativeIdx);
                         }
-                    }
-                    else {
+                    } else {
                         for (int idx = 0; idx < songList.size(); idx++) {
                             songTableArray[idx] = songTableList.get(idx);
                         }
                     }
                     //Habilita botão Next se a música atual era a última música
-                    if (currentIndex == songList.size()-2 && !musicStopped) {
+                    if (currentIndex == songList.size() - 2 && !musicStopped) {
                         window.setEnabledNextButton(true);
                     }
 
@@ -297,7 +298,7 @@ public class Player {
                 }
 
             } catch (IOException | BitstreamException | UnsupportedTagException | InvalidDataException ex) {
-                throw new RuntimeException(ex);
+                logger.warning(ex.toString());
             } finally {
                 lock.unlock();
             }
@@ -315,7 +316,6 @@ public class Player {
     }
 
     private void playNow(int idx) {
-
         //Verifica se alguma música está tocando quando playNow pressionado
         if (playing) {
             newMusicPlay = true;
@@ -337,20 +337,10 @@ public class Player {
                 window.setEnabledScrubber(true);
 
                 //Libera o clique do botão next caso tenha música depois na fila
-                if (currentIndex < songList.size()-1) {
-                    window.setEnabledNextButton(true);
-                }
-                else {
-                    window.setEnabledNextButton(false);
-                }
+                window.setEnabledNextButton(currentIndex < songList.size() - 1);
 
                 //Libera o clique do botão previous caso tenha música antes na fila
-                if (currentIndex > 0) {
-                    window.setEnabledPreviousButton(true);
-                }
-                else {
-                    window.setEnabledPreviousButton(false);
-                }
+                window.setEnabledPreviousButton(currentIndex > 0);
 
                 //Música atual pega no array aleatório
                 if (shuffleMusic) {
@@ -372,15 +362,16 @@ public class Player {
                     bitstream = new Bitstream(currentSong.getBufferedInputStream());
                     play();
                 } catch (JavaLayerException | FileNotFoundException ex) {
-                    System.out.println(ex);
+                    logger.warning(ex.toString());
                 }
             } finally {
                 lock.unlock();
             }
         }).start();
     }
+
     private void play() {
-        new Thread( () -> {
+        new Thread(() -> {
             //Indica que a música está tocando
             play = true;
             playing = true;
@@ -393,37 +384,32 @@ public class Player {
                         break;
                     }
                     //Atualiza a janela com o tempo atual e tempo total da música
-                    currentTime = (int) (currentFrame*currentSong.getMsPerFrame());
+                    currentTime = (int) (currentFrame * currentSong.getMsPerFrame());
                     totalTime = (int) currentSong.getMsLength();
                     window.setTime(currentTime, totalTime);
 
                     //Verifica a música foi finalizada
                     if (window.getScrubberValue() < currentSong.getMsLength()) {
-                        playNextFrame();
+                        play = playNextFrame();
                         currentFrame++;
-                    }
-                    else {
+                    } else {
                         play = false;
                         playing = false;
                     }
                 } catch (JavaLayerException ex) {
-                    System.out.println(ex);
+                    logger.warning(ex.toString());
                 }
             }
 
             //Toca a próxima música da lista, caso exista OU se estiver em Loop
             if (!play) {
-                if (currentIndex < songList.size()-1 && !musicStopped) {
-                    //System.out.println("NEXT");
+                if (currentIndex < songList.size() - 1 && !musicStopped) {
                     currentIndex++;
                     playNow(currentIndex);
-                }
-                else if(currentIndex == songList.size()-1 && !musicStopped && musicInLoop) {
+                } else if (currentIndex == songList.size() - 1 && !musicStopped && musicInLoop) {
                     currentIndex = 0;
                     playNow(0);
-                }
-                else {
-                    //System.out.println("END");
+                } else {
                     stop();
                     window.setPlayPauseButtonIcon(0);
                     window.setQueueList(songTableArray);
@@ -431,6 +417,7 @@ public class Player {
             }
         }).start();
     }
+
     private void stop() {
         //Para a execução da música
         try {
@@ -443,8 +430,7 @@ public class Player {
             musicStopped = true;
             //Atualiza a janela para nenhuma música tocando
             window.resetMiniPlayer();
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -458,8 +444,7 @@ public class Player {
                 currentIndex++;
                 playNow(currentIndex);
             }
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -473,8 +458,7 @@ public class Player {
                 currentIndex--;
                 playNow(currentIndex);
             }
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -489,8 +473,7 @@ public class Player {
 
             if (newMusicPlay) {
                 newMusicPlay = false;
-            }
-            else {
+            } else {
                 //Cria Decoder e Bitstream (idêntico ao playNow)
                 try {
                     currentFrame = 0;
@@ -498,17 +481,17 @@ public class Player {
                     device.open(decoder = new Decoder());
                     bitstream = new Bitstream(currentSong.getBufferedInputStream());
                 } catch (JavaLayerException | FileNotFoundException ex) {
-                    System.out.println(ex);
+                    logger.warning(ex.toString());
                 }
 
-                lastFrame = (int) (window.getScrubberValue() / currentSong.getMsPerFrame());
+                int lastFrame = (int) (window.getScrubberValue() / currentSong.getMsPerFrame());
 
                 try {
                     skipToFrame(lastFrame);
                     currentFrame = lastFrame;
                     window.setTime((int) (currentFrame * currentSong.getMsPerFrame()), totalTime);
-                } catch (BitstreamException e) {
-                    System.out.println(e);
+                } catch (BitstreamException ex) {
+                    logger.warning(ex.toString());
                 }
 
                 if (playing) paused = false;
@@ -573,21 +556,13 @@ public class Player {
             window.setEnabledPreviousButton(false);
         } else {
             //Libera o clique do botão next caso tenha música depois na fila
-            if (currentIndex < songList.size() - 1) {
-                window.setEnabledNextButton(true);
-            } else {
-                window.setEnabledNextButton(false);
-            }
+            window.setEnabledNextButton(currentIndex < songList.size() - 1);
 
             //Libera o clique do botão previous caso tenha música antes na fila
-            if (currentIndex > 0) {
-                window.setEnabledPreviousButton(true);
-            } else {
-                window.setEnabledPreviousButton(false);
-            }
+            window.setEnabledPreviousButton(currentIndex > 0);
         }
-            //Atualiza a janela na nova ordem
-            window.setQueueList(songTableArray);
+        //Atualiza a janela na nova ordem
+        window.setQueueList(songTableArray);
     }
 
     //</editor-fold>
